@@ -70,7 +70,7 @@ def prepare(df):
 
 
 # ----------------------------------------------------------------------- header
-st.title("🛒 Shopper Intent Lab")
+st.title("Shopper Intent Lab")
 st.write(
     "Upload a CSV of website sessions, pick a model, and see how well it spots the "
     "sessions that end in a purchase. Buyers are only about 1 in 6 sessions, so "
