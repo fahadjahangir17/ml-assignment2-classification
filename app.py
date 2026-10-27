@@ -18,12 +18,77 @@ from sklearn.metrics import (ConfusionMatrixDisplay, classification_report,
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ROOT, "model"))
-import train_models as tm  # noqa: E402  (needs the sys.path line above)
+import train_models as tm  
 
 st.set_page_config(page_title="Shopper Intent Lab", layout="wide")
 
 MODEL_NAMES = list(tm.MODEL_FILES.keys())
 SAMPLE_PATH = os.path.join(ROOT, "test_data.csv")
+
+# ------------------------------------------------------------------------ look
+INK, PAPER, BLUE, CORAL, AMBER, SLATE = "#121B33", "#F6F7FA", "#2447F5", "#E8445A", "#F5A524", "#D5DBE8"
+plt.rcParams.update({
+    "figure.facecolor": PAPER, "axes.facecolor": PAPER, "axes.edgecolor": "#B9C1D3",
+    "text.color": INK, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK,
+    "axes.spines.top": False, "axes.spines.right": False,
+})
+
+st.markdown(f"""<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Public+Sans:wght@400;500;600&display=swap');
+html, body, .stApp, [data-testid="stSidebar"] {{ font-family: 'Public Sans', system-ui, sans-serif; }}
+.stApp h1, .stApp h2, .stApp h3, .headline, .num {{
+    font-family: 'Bricolage Grotesque', 'Public Sans', system-ui, sans-serif; letter-spacing: -0.02em; }}
+.stApp h1 {{ font-size: 2.8rem; font-weight: 800; line-height: 1.05; padding-bottom: 0.2rem; }}
+.stApp .headline {{ font-size: 2.1rem; font-weight: 800; line-height: 1.1; margin: 1.6rem 0 0.3rem; }}
+.stApp .subline {{ font-size: 1.05rem; margin: 0 0 1.1rem; max-width: 70ch; }}
+.grid {{ display: grid; grid-template-columns: repeat(40, 1fr); gap: 3px; max-width: 820px; }}
+.c {{ display: block; aspect-ratio: 1; border-radius: 2px; }}
+.tp {{ background: {BLUE}; }}
+.fn {{ background: {PAPER}; box-shadow: inset 0 0 0 2px {CORAL}; }}
+.fp {{ background: {AMBER}; }}
+.tn {{ background: {SLATE}; }}
+.stApp .legend {{ display: flex; flex-wrap: wrap; gap: 0.5rem 1.8rem; list-style: none; padding: 0 !important; margin: 1rem 0 0.3rem; }}
+.stApp .legend li {{ display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin: 0; padding: 0; }}
+.legend .c {{ width: 14px; }}
+.stApp .scale {{ font-size: 0.85rem; opacity: 0.75; margin: 0 0 1.8rem; }}
+.stats {{ display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.2rem; max-width: 820px; margin-bottom: 1.5rem; }}
+.stApp .num {{ font-size: 2rem; font-weight: 800; line-height: 1; }}
+.stApp .lbl {{ font-size: 0.9rem; margin-top: 0.25rem; }}
+@media (max-width: 640px) {{
+    .grid {{ grid-template-columns: repeat(20, 1fr); }}
+    .stats {{ grid-template-columns: repeat(3, minmax(0, 1fr)); }}
+    .stApp h1 {{ font-size: 2.1rem; }}
+}}
+</style>""", unsafe_allow_html=True)
+
+
+def allocate(counts, cells=400):
+    """Share `cells` squares between the groups in proportion to their counts.
+    Every group that exists gets at least one square, so small groups stay visible."""
+    raw = [c * cells / sum(counts) for c in counts]
+    squares = [max(int(r), 1) if c else 0 for r, c in zip(raw, counts)]
+    by_remainder = sorted(range(len(counts)), key=lambda i: raw[i] - int(raw[i]), reverse=True)
+    i = 0
+    while sum(squares) < cells:
+        squares[by_remainder[i % len(counts)]] += 1
+        i += 1
+    while sum(squares) > cells:
+        squares[squares.index(max(squares))] -= 1
+    return squares
+
+
+def session_grid(groups, total):
+    """groups: list of (css class, label, count). Returns HTML for the grid and its legend."""
+    squares = allocate([n for _, _, n in groups])
+    scale_note = (f"Each square stands for about {total / 400:.0f} sessions." if total >= 400
+                  else "The grid shows proportions across 400 squares.")
+    cells = "".join(f'<span class="c {css}"></span>' * k for (css, _, _), k in zip(groups, squares))
+    summary = ", ".join(f"{n:,} {label}" for _, label, n in groups)
+    legend = "".join(f'<li><i class="c {css}"></i><span><b>{n:,}</b> {label}</span></li>'
+                     for css, label, n in groups)
+    return (f'<div class="grid" role="img" aria-label="Sessions: {summary}">{cells}</div>'
+            f'<ul class="legend">{legend}</ul>'
+            f'<div class="scale">{scale_note}</div>')
 
 
 # ---------------------------------------------------------------- model loading
@@ -123,28 +188,32 @@ st.caption(f"Scoring {len(data):,} sessions from the {source} with **{model_name
 if not has_labels and tm.TARGET not in data.columns:
     st.warning("No `Revenue` column found, so only predictions are shown (no metrics).")
 
-tabs = st.tabs(["Metrics", "Confusion matrix", "ROC curve", "Compare all models", "Predictions"])
+if has_labels:
+    y = data[tm.TARGET].astype(int)
+    m = tm.compute_metrics(y, pred, score)
+    tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1]).ravel()
+    tiles = "".join(f'<div><div class="num">{v:.4f}</div><div class="lbl">{k}</div></div>'
+                    for k, v in m.items())
+    st.markdown(
+        f'<div class="headline">{tp:,} of {tp + fn:,} real buyers caught</div>'
+        f'<div class="subline">The model missed {fn:,} buyers and flagged {fp:,} sessions that never bought.</div>'
+        + session_grid([("tp", "buyers caught", tp), ("fn", "buyers missed", fn),
+                        ("fp", "false alarms", fp), ("tn", "correctly left alone", tn)], len(data))
+        + f'<div class="stats">{tiles}</div>',
+        unsafe_allow_html=True)
+else:
+    flagged = int(pred.sum())
+    st.markdown(
+        f'<div class="headline">{flagged:,} of {len(pred):,} sessions flagged as likely buyers</div>'
+        f'<div class="subline">Add a Revenue column to see how many of them were right.</div>'
+        + session_grid([("tp", "flagged as buyers", flagged),
+                        ("tn", "not flagged", len(pred) - flagged)], len(data)),
+        unsafe_allow_html=True)
 
-# ---------------------------------------------------------------------- metrics
-with tabs[0]:
-    if has_labels:
-        y = data[tm.TARGET].astype(int)
-        m = tm.compute_metrics(y, pred, score)
-        cols = st.columns(6)
-        for col, (k, v) in zip(cols, m.items()):
-            col.metric(k, f"{v:.4f}")
-        tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1]).ravel()
-        st.markdown(
-            f"In plain terms: of **{tp + fn}** sessions that really ended in a purchase, "
-            f"the model caught **{tp}** and missed **{fn}**. It also flagged **{fp}** "
-            f"sessions as buyers that never bought."
-        )
-    else:
-        st.write(f"The model predicts **{int(pred.sum())}** buying sessions "
-                 f"out of {len(pred):,}.")
+tabs = st.tabs(["Confusion matrix", "ROC curve", "Compare all models", "Predictions"])
 
 # -------------------------------------------------------------- confusion matrix
-with tabs[1]:
+with tabs[0]:
     if has_labels:
         left, right = st.columns([1, 1])
         with left:
@@ -163,12 +232,12 @@ with tabs[1]:
         st.info("Add a `Revenue` column to see the confusion matrix and report.")
 
 # -------------------------------------------------------------------- ROC curve
-with tabs[2]:
+with tabs[1]:
     if has_labels:
         fpr, tpr, _ = roc_curve(y, score)
         fig, ax = plt.subplots(figsize=(5, 4))
-        ax.plot(fpr, tpr, lw=2, label=f"{model_name} (AUC = {m['AUC']:.3f})")
-        ax.plot([0, 1], [0, 1], "--", color="grey", label="Random guess")
+        ax.plot(fpr, tpr, lw=2.5, color=BLUE, label=f"{model_name} (AUC = {m['AUC']:.3f})")
+        ax.plot([0, 1], [0, 1], "--", color="#8A94A8", label="Random guess")
         ax.set_xlabel("False positive rate")
         ax.set_ylabel("True positive rate")
         ax.legend(loc="lower right")
@@ -177,18 +246,18 @@ with tabs[2]:
         st.info("Add a `Revenue` column to draw the ROC curve.")
 
 # ------------------------------------------------------------ compare all models
-with tabs[3]:
+with tabs[2]:
     if has_labels:
         rows = []
         for name, mdl in models.items():
             p, s = mdl.predict(X), tm.get_scores(mdl, X)
             rows.append({"ML Model Name": name, **tm.compute_metrics(y, p, s)})
         comp = pd.DataFrame(rows).set_index("ML Model Name")
-        st.dataframe(comp.style.format("{:.4f}").highlight_max(axis=0, color="#cfe8cf"),
+        st.dataframe(comp.style.format("{:.4f}").highlight_max(axis=0, color="#DCE4FF"),
                      width="stretch")
-        st.caption("Green marks the best value in each column.")
+        st.caption("Shaded cells mark the best value in each column.")
         fig, ax = plt.subplots(figsize=(8, 3.6))
-        comp[["AUC", "F1", "MCC"]].plot.bar(ax=ax, rot=15, colormap="viridis")
+        comp[["AUC", "F1", "MCC"]].plot.bar(ax=ax, rot=15, color=[BLUE, AMBER, INK])
         ax.set_ylim(0, 1.1)
         ax.legend(ncol=3, loc="upper center", frameon=False)
         ax.set_xlabel("")
@@ -197,7 +266,7 @@ with tabs[3]:
         st.info("Add a `Revenue` column to compare the models.")
 
 # ------------------------------------------------------------------ predictions
-with tabs[4]:
+with tabs[3]:
     out = data.copy()
     out["Predicted_Revenue"] = pred
     out["Purchase_Score"] = score.round(4)
