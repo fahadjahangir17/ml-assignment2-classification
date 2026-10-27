@@ -51,12 +51,11 @@ html, body, .stApp, [data-testid="stSidebar"] {{ font-family: 'Public Sans', sys
 .stApp .legend li {{ display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin: 0; padding: 0; }}
 .legend .c {{ width: 14px; }}
 .stApp .scale {{ font-size: 0.85rem; opacity: 0.75; margin: 0 0 1.8rem; }}
-.stats {{ display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.2rem; max-width: 820px; margin-bottom: 1.5rem; }}
-.stApp .num {{ font-size: 2rem; font-weight: 800; line-height: 1; }}
-.stApp .lbl {{ font-size: 0.9rem; margin-top: 0.25rem; }}
+.stats {{ display: flex; flex-wrap: wrap; gap: 1.2rem 1.6rem; margin-bottom: 1.5rem; }}
+.stApp .num {{ font-size: 1.75rem; font-weight: 800; line-height: 1; }}
+.stApp .lbl {{ font-size: 0.9rem; margin-top: 0.25rem; white-space: nowrap; }}
 @media (max-width: 640px) {{
     .grid {{ grid-template-columns: repeat(20, 1fr); }}
-    .stats {{ grid-template-columns: repeat(3, minmax(0, 1fr)); }}
     .stApp h1 {{ font-size: 2.1rem; }}
 }}
 </style>""", unsafe_allow_html=True)
