@@ -20,7 +20,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ROOT, "model"))
 import train_models as tm  # noqa: E402  (needs the sys.path line above)
 
-st.set_page_config(page_title="Shopper Intent Lab", page_icon="🛒", layout="wide")
+st.set_page_config(page_title="Shopper Intent Lab", layout="wide")
 
 MODEL_NAMES = list(tm.MODEL_FILES.keys())
 SAMPLE_PATH = os.path.join(ROOT, "test_data.csv")
