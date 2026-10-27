@@ -192,7 +192,8 @@ if has_labels:
     y = data[tm.TARGET].astype(int)
     m = tm.compute_metrics(y, pred, score)
     tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1]).ravel()
-    tiles = "".join(f'<div><div class="num">{v:.4f}</div><div class="lbl">{k}</div></div>'
+    names = {"AUC": "AUC Score", "F1": "F1 Score", "MCC": "Matthews Correlation Coefficient (MCC Score)"}
+    tiles = "".join(f'<div><div class="num">{v:.4f}</div><div class="lbl">{names.get(k, k)}</div></div>'
                     for k, v in m.items())
     st.markdown(
         f'<div class="headline">{tp:,} of {tp + fn:,} real buyers caught</div>'
@@ -210,7 +211,7 @@ else:
                         ("tn", "not flagged", len(pred) - flagged)], len(data)),
         unsafe_allow_html=True)
 
-tabs = st.tabs(["Confusion matrix", "ROC curve", "Compare all models", "Predictions"])
+tabs = st.tabs(["Confusion Matrix", "ROC Curve", "Compare All Models", "Predictions"])
 
 # -------------------------------------------------------------- confusion matrix
 with tabs[0]:
@@ -219,15 +220,20 @@ with tabs[0]:
         with left:
             fig, ax = plt.subplots(figsize=(4.2, 3.8))
             ConfusionMatrixDisplay.from_predictions(
-                y, pred, display_labels=["No purchase", "Purchase"],
+                y, pred, display_labels=["No Purchase", "Purchase"],
                 cmap="Blues", ax=ax, colorbar=False)
             ax.set_title(f"{model_name}")
+            ax.set_xlabel("Predicted Label")
+            ax.set_ylabel("True Label")
             st.pyplot(fig)
         with right:
-            st.subheader("Classification report")
-            rep = classification_report(y, pred, target_names=["No purchase", "Purchase"],
+            st.subheader("Classification Report")
+            rep = classification_report(y, pred, target_names=["No Purchase", "Purchase"],
                                         output_dict=True, zero_division=0)
-            st.dataframe(pd.DataFrame(rep).T.round(3), width="stretch")
+            rep_df = pd.DataFrame(rep).T.round(3)
+            rep_df.columns = ["Precision", "Recall", "F1-Score", "Support"]
+            rep_df.index = [i.title() for i in rep_df.index]
+            st.dataframe(rep_df, width="stretch")
     else:
         st.info("Add a `Revenue` column to see the confusion matrix and report.")
 
@@ -253,12 +259,13 @@ with tabs[2]:
             p, s = mdl.predict(X), tm.get_scores(mdl, X)
             rows.append({"ML Model Name": name, **tm.compute_metrics(y, p, s)})
         comp = pd.DataFrame(rows).set_index("ML Model Name")
+        comp = comp.rename(columns={"AUC": "AUC Score", "F1": "F1 Score", "MCC": "MCC Score"})
         st.dataframe(comp.style.format("{:.4f}").highlight_max(
             axis=0, props="background-color: #A9BEFF; color: #000000; font-weight: 700;"),
                      width="stretch")
         st.caption("Shaded cells mark the best value in each column.")
         fig, ax = plt.subplots(figsize=(8, 3.6))
-        comp[["AUC", "F1", "MCC"]].plot.bar(ax=ax, rot=15, color=[BLUE, AMBER, INK])
+        comp[["AUC Score", "F1 Score", "MCC Score"]].plot.bar(ax=ax, rot=15, color=[BLUE, AMBER, INK])
         ax.set_ylim(0, 1.1)
         ax.legend(ncol=3, loc="upper center", frameon=False)
         ax.set_xlabel("")
