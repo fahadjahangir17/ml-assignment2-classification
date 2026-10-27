@@ -18,7 +18,7 @@ from sklearn.metrics import (ConfusionMatrixDisplay, classification_report,
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ROOT, "model"))
-import train_models as tm  
+import train_models as tm  # noqa: E402  (needs the sys.path line above)
 
 st.set_page_config(page_title="Shopper Intent Lab", layout="wide")
 
@@ -253,7 +253,8 @@ with tabs[2]:
             p, s = mdl.predict(X), tm.get_scores(mdl, X)
             rows.append({"ML Model Name": name, **tm.compute_metrics(y, p, s)})
         comp = pd.DataFrame(rows).set_index("ML Model Name")
-        st.dataframe(comp.style.format("{:.4f}").highlight_max(axis=0, color="#DCE4FF"),
+        st.dataframe(comp.style.format("{:.4f}").highlight_max(
+            axis=0, props="background-color: #A9BEFF; color: #000000; font-weight: 700;"),
                      width="stretch")
         st.caption("Shaded cells mark the best value in each column.")
         fig, ax = plt.subplots(figsize=(8, 3.6))
