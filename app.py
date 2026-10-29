@@ -138,7 +138,7 @@ st.title("Shopper Intent Lab")
 st.write(
     "Upload a CSV of website sessions, pick a model, and see how well it spots the "
     "sessions that end in a purchase. Buyers are only about 1 in 6 sessions, so "
-    "accuracy alone is a weak signal here. Recall, F1 and MCC tell you more."
+    "accuracy alone is a weak signal here. Recall, F1 and MCC are more informative."
 )
 
 models, retrained = load_models()
@@ -151,7 +151,7 @@ with st.sidebar:
     st.header("1. Data")
     upload = st.file_uploader("Upload test data (CSV)", type="csv",
                               help="Same columns as test_data.csv. Include `Revenue` to get scores.")
-    st.caption("No file uploaded? The app scores the bundled test_data.csv so you can see it working.")
+    st.caption("No file uploaded? The app scores the bundled test_data.csv as a working demo.")
     st.header("2. Model")
     model_name = st.selectbox("Choose a classifier", MODEL_NAMES, index=1)
     st.caption("Every model is a pipeline: scaling and one-hot encoding happen "
