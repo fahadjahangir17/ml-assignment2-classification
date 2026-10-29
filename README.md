@@ -117,8 +117,9 @@ Deployed on Streamlit Community Cloud from the `main` branch, file `app.py`. It 
 
 - A CSV upload box in the sidebar. With nothing uploaded, the app scores the bundled `test_data.csv` so it never opens empty.
 - A drop-down to choose any of the five models.
-- Six metric tiles (Accuracy, AUC, Precision, Recall, F1, MCC) and a one-line plain-English summary of how many buyers were caught and missed.
-- A confusion matrix and a full classification report.
-- A ROC curve, a side-by-side table of all five models on the uploaded data, and a downloadable CSV of predictions.
+- A grid of 400 squares that shows how many real buyers the model caught and missed and how many false alarms it raised, with the six metrics (Accuracy, AUC Score, Precision, Recall, F1 Score and Matthews Correlation Coefficient) shown beneath it.
+- Four tabs under the grid: Confusion Matrix (with a full Classification Report), ROC Curve, Compare All Models and Predictions.
+- Compare All Models is a side-by-side table of the five models on the uploaded data, with the best value in each column shaded, plus a bar chart of AUC Score, F1 Score and MCC Score.
+- Predictions lists the first 200 rows with the model's output and has a button to download all predictions as a CSV.
 
 If the uploaded file has no `Revenue` column (or only one class in it), the app still returns predictions and skips the metrics. A file with a missing feature column gets a clear error naming the column. If the saved `.pkl` files were built with a different scikit-learn version and cannot load, the app retrains the five models from `data/` on startup, so it does not crash on a version mismatch.
