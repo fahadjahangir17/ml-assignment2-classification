@@ -230,7 +230,7 @@ with tabs[0]:
             rep = classification_report(y, pred, target_names=["No Purchase", "Purchase"],
                                         output_dict=True, zero_division=0)
             rep_df = pd.DataFrame(rep).T.round(3)
-            rep_df.columns = ["Precision", "Recall", "F1-Score", "Support"]
+            rep_df.columns = ["Precision", "Recall", "F1 Score", "Support"]
             rep_df.index = [i.title() for i in rep_df.index]
             st.dataframe(rep_df, width="stretch")
     else:
